@@ -22,7 +22,7 @@ namespace Retro
 			int _ref = 0;
 		public:
 			// Default constructor
-			LuaState() = delete;
+			LuaState() {};
 			LuaState(lua_State* L, int ref) noexcept
 				: _L(L)
 				, _ref(ref) 
