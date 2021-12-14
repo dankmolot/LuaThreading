@@ -117,7 +117,7 @@ namespace Retro
 		{
 			{ // Unlocking main thread
 				std::lock_guard<std::mutex> lck(lock->m);
-				lock->step1 = true;
+				lock->step2 = true;
 			}
 			lock->cv.notify_one();
 		}
