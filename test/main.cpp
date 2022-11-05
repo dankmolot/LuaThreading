@@ -51,3 +51,9 @@ GMOD_MODULE_OPEN() {
 
 	return 0;
 }
+
+GMOD_MODULE_CLOSE() {
+	LuaThreadingSingleton.deinitialize();
+
+	return 0;
+}

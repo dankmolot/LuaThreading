@@ -54,6 +54,10 @@ void LuaThreading::initialize() {
 	thread_id = std::this_thread::get_id();
 }
 
+void LuaThreading::deinitialize() {
+	think();
+}
+
 void LuaThreading::think() {
 	if (queue.empty()) return;
 

@@ -49,6 +49,7 @@ private:
 
 public:
 	void initialize();
+	void deinitialize();
 	void think();
 
 	LockPointer get_lock();
