@@ -54,8 +54,8 @@ void LuaThreading::initialize() {
 	thread_id = std::this_thread::get_id();
 }
 
-int LuaThreading::think(lua_State* L) {
-	if (queue.empty()) return 0;
+void LuaThreading::think() {
+	if (queue.empty()) return;
 
 	std::lock_guard<std::mutex> guard(queue_mutex);
 	while (!queue.empty()) {
@@ -77,8 +77,6 @@ int LuaThreading::think(lua_State* L) {
 
 		queue.pop();
 	}
-
-	return 0;
 }
 
 LuaThreading::LockPointer LuaThreading::get_lock() {

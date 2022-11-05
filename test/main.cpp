@@ -10,7 +10,7 @@ void register_think(GarrysMod::Lua::ILuaBase* LUA) {
 	LUA->PushString("test"); // identifier
 	LUA->PushNumber(0); // delay
 	LUA->PushNumber(0); // repetitions
-	LUA->PushCFunction([](lua_State* L) { return LuaThreadingSingleton.think(L); });
+	LUA->PushCFunction([](lua_State* L) { LuaThreadingSingleton.think(); return 0; });
 	LUA->Call(4, 0);
 	LUA->Pop();
 

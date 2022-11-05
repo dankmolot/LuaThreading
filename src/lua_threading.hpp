@@ -49,7 +49,7 @@ private:
 
 public:
 	void initialize();
-	int think(lua_State* L);
+	void think();
 
 	LockPointer get_lock();
 
