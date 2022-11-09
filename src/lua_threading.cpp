@@ -83,12 +83,16 @@ void LuaThreading::think() {
 	}
 }
 
+bool LuaThreading::need_sync() {
+	return std::this_thread::get_id() == thread_id;
+}
+
 LuaThreading::LockPointer LuaThreading::get_lock() {
 	return std::make_shared<Lock>();
 }
 
 void LuaThreading::sync(LuaThreading::LockPointer &lock) {
-	if (std::this_thread::get_id() == thread_id)
+	if (need_sync())
 		return;
 
 	{

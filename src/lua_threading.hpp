@@ -52,6 +52,8 @@ public:
 	void deinitialize();
 	void think();
 
+	bool need_sync();
+
 	LockPointer get_lock();
 
 	void sync(LockPointer &lock);
