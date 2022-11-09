@@ -22,7 +22,6 @@ public:
 		lua_State* _L = nullptr;
 		int _ref = 0;
 	public:
-		LuaState() = delete;
 		LuaState(lua_State* L, int ref) noexcept;
 
 		// Copy
