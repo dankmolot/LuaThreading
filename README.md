@@ -9,12 +9,12 @@ Initialize LuaThreading
 #include <lua_threading.hpp>
 
 GMOD_MODULE_OPEN() {
-	LuaThreading::Initialize(LUA);
+    LuaThreading::Initialize(LUA);
 
     // Register think somewhere here
     // ...
 
-	return 0;
+    return 0;
 }
 
 GMOD_MODULE_CLOSE() {
@@ -73,17 +73,17 @@ namespace LuaThreading {
         lua_State* state;
 
         Lua(); // Runs LuaThreading::NeedSync internally
-		Lua(bool sync); // true if you need to sync with main thread
+        Lua(bool sync); // true if you need to sync with main thread
 
         ~Lua(); // Destructor will unlock main thread, if it was locked
 
         // Copying is prohibited
-		Lua(const Lua& other) = delete;
-		Lua& operator=(const Lua& other) = delete;
+        Lua(const Lua& other) = delete;
+        Lua& operator=(const Lua& other) = delete;
 
-		// Move constructor is permitted, but not move statement
-		Lua(Lua&& other) noexcept;
-		Lua& operator=(Lua&& other) = delete;
+        // Move constructor is permitted, but not move statement
+        Lua(Lua&& other) noexcept;
+        Lua& operator=(Lua&& other) = delete;
 
         // You can use LuaThreading::Lua class as it was Garrysmod::Lua::ILuaBase*
         GarrysMod::Lua::ILuaBase* operator->() const;
@@ -91,16 +91,16 @@ namespace LuaThreading {
 
     // Returns true, if called in non main thread
     bool NeedSync();
-    
+
     // Same as LuaThreading::Lua();
     Lua AcquireLua();
-	Lua AcquireLua(bool sync);
+    Lua AcquireLua(bool sync);
 
     void Initialize(GarrysMod::Lua::ILuaBase* LUA);
-	void Deinitialize(GarrysMod::Lua::ILuaBase* LUA);
+    void Deinitialize(GarrysMod::Lua::ILuaBase* LUA);
 
-	int Think(lua_State* L);
-	int Think(GarrysMod::Lua::ILuaBase* LUA);
+    int Think(lua_State* L);
+    int Think(GarrysMod::Lua::ILuaBase* LUA);
 }
 ```
 
