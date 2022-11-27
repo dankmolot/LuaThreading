@@ -1,129 +1,144 @@
-
-#include <lua.hpp>
 #include "lua_threading.hpp"
+#include <lua.hpp>
+#include <GarrysMod/Lua/Interface.h>
 
-LuaThreading::LuaState::LuaState(lua_State* L, int ref) noexcept {
-	_L = L;
-	_ref = ref;
-}
+#include <queue>
 
-LuaThreading::LuaState::LuaState(LuaThreading::LuaState&& other) noexcept {
-	_L = other._L;
-	_ref = other._ref;
+struct LuaState {
+	lua_State* L = nullptr;
+	int ref = 0;
+};
 
-	other._L = nullptr;
-	other._ref = 0;
-}
-
-LuaThreading::LuaState& LuaThreading::LuaState::operator=(LuaThreading::LuaState&& other) noexcept {
-	if (this != &other) {
-		auto L = _L;
-		auto ref = _ref;
-
-		_L = other._L;
-		_ref = other._ref;
-
-		other._L = L;
-		other._ref = ref;
+namespace LuaThreading {
+	// Initializing global variables
+	std::thread::id MainThreadID;
+	static std::mutex GlobalLock;
+	static std::queue<SyncLockPointer> Locks;
+	static LuaState GlobalState;
+		
+	bool NeedSync() {
+		return std::this_thread::get_id() != MainThreadID;
 	}
 
-	return *this;
-}
-
-bool LuaThreading::LuaState::destroy() {
-	if (is_valid()) {
-		luaL_unref(_L, LUA_REGISTRYINDEX, _ref);
-		_L = nullptr;
-		_ref = 0;
-
-		return true;
+	Lua AcquireLua()
+	{
+		return Lua();
 	}
 
-	return false;
-}
+	Lua AcquireLua(bool sync)
+	{
+		return Lua(sync);
+	}
 
-LuaThreading::LuaState::~LuaState() {
-	destroy();
-}
+	void Initialize(GarrysMod::Lua::ILuaBase* LUA) {
+		MainThreadID = std::this_thread::get_id();
 
-bool LuaThreading::LuaState::is_valid() const {
-	return _L != nullptr && _ref != LUA_REFNIL && _ref != LUA_NOREF;
-}
+		GlobalState.L = lua_newthread(LUA->GetState());
+		GlobalState.ref = LUA->ReferenceCreate();
+	}
 
-void LuaThreading::initialize() {
-	thread_id = std::this_thread::get_id();
-}
+	void Deinitialize(GarrysMod::Lua::ILuaBase* LUA) {
+		if (GlobalState.ref) {
+			LUA->ReferenceFree(GlobalState.ref);
 
-void LuaThreading::deinitialize() {
-	think();
-}
+			GlobalState.L = nullptr;
+			GlobalState.ref = 0;
+		}
+	}
 
-void LuaThreading::think() {
-	if (queue.empty()) return;
+	int LuaThreading::Think(lua_State* L)
+	{
+		auto LUA = L->luabase;
+		LUA->SetState(L);
 
-	std::lock_guard<std::mutex> guard(queue_mutex);
-	while (!queue.empty()) {
-		auto& lock = queue.front();
+		return Think(LUA);
+	}
+	int LuaThreading::Think(GarrysMod::Lua::ILuaBase* LUA) {
+		if (!Locks.empty()) {
+			std::lock_guard<std::mutex> guard(GlobalLock);
 
-		{
-			std::unique_lock ulock(lock->m);
-			lock->step1 = true;
+			auto& lock = Locks.front();
+			{
+				std::unique_lock ulock(lock->m);
+				lock->step1 = true;
+				lock->state = LUA->GetState();
 
-			// Unlocking thread
-			lock->cv.notify_one();
+				// Unlocking thread
+				lock->cv.notify_one();
 
-			// Waiting for thread
-			lock->cv.wait(ulock, [&lock] { return lock->step2; });
+				// Waiting for thread
+				lock->cv.wait(ulock, [&lock] { return lock->step2; });
 
-			lock->step1 = false;
-			lock->step2 = false;
+				lock->step1 = false;
+				lock->step2 = false;
+				lock->state = nullptr;
+			}
+			Locks.pop();
 		}
 
-		queue.pop();
-	}
-}
-
-bool LuaThreading::need_sync() {
-	return std::this_thread::get_id() != thread_id;
-}
-
-LuaThreading::LockPointer LuaThreading::get_lock() {
-	return std::make_shared<Lock>();
-}
-
-void LuaThreading::sync(LuaThreading::LockPointer &lock) {
-	if (need_sync())
-		return;
-
-	{
-		std::lock_guard<std::mutex> guard(queue_mutex);
-		queue.push(lock);
+		return 0;
 	}
 
-	std::unique_lock<std::mutex> ulock(lock->m);
-	lock->cv.wait(ulock, [&lock] { return lock->step1; });
-}
+	// Lua class implementation
+	Lua::Lua() {
+		ReceiveState(NeedSync());
+		SetupState();
+	}
 
-LuaThreading::LockPointer LuaThreading::sync() {
-	auto lock = get_lock();
+	Lua::Lua(bool sync) {
+		ReceiveState(sync);
+		SetupState();
+	}
 
-	sync(lock);
+	Lua::Lua(Lua&& other) noexcept {
+		state = other.state;
+		other.state = nullptr;
 
-	return lock;
-}
+		lock.swap(other.lock);
+	}
 
-void LuaThreading::desync(LockPointer& lock) {
-	if (!lock->step1)
-		return;
+	//Lua& Lua::operator=(Lua&& other) noexcept {
+	//	// TODO: insert return statement here
+	//}
 
-	std::lock_guard<std::mutex> guard(lock->m);
-	lock->step2 = true;
-	lock->cv.notify_one();
-}
+	Lua::~Lua() {
+		if (state) {
+			state->luabase->SetState(orig_state);
+		}
+		
 
-LuaThreading::LuaState LuaThreading::create_state(lua_State* L) {
-	lua_State* L2 = lua_newthread(L);
-	int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+		// Unlocking if locked
+		if (lock && lock->step1) {
+			std::lock_guard<std::mutex> guard(lock->m);
+			lock->step2 = true;
+			lock->cv.notify_one();
+		}
+	}
 
-	return LuaState(L2, ref);
+	GarrysMod::Lua::ILuaBase* Lua::operator->() const {
+		return state->luabase;
+	}
+
+	void Lua::ReceiveState(bool sync) {
+		if (!sync) {
+			state = GlobalState.L;
+			return;
+		}
+
+		lock = std::make_shared<SyncLock>();
+
+		GlobalLock.lock();
+		Locks.push(lock);
+		GlobalLock.unlock();
+
+		std::unique_lock<std::mutex> ulock(lock->m);
+		lock->cv.wait(ulock, [&] { return lock->step1; });
+
+		state = lock->state;
+	}
+
+	void Lua::SetupState() {
+		orig_state = state->luabase->GetState();
+		state->luabase->SetState(state);
+	}
 }

@@ -1,65 +1,64 @@
+#ifndef LUA_THREADING_HPP
+#define LUA_THREADING_HPP
+
+#pragma once
+
 #include <GarrysMod/Lua/LuaBase.h>
-#include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <memory>
-#include <iostream>
-#include <queue>
 
-class LuaThreading {
-public:
-	struct Lock {
+namespace LuaThreading {
+	// Global Thread ID to determine if we need to sync threads
+	extern std::thread::id MainThreadID;
+
+	struct SyncLock {
 		std::mutex m;
 		std::condition_variable cv;
 		bool step1 = false;
 		bool step2 = false;
+		lua_State* state = nullptr;
 	};
 
-	typedef std::shared_ptr<Lock> LockPointer;
+	typedef std::shared_ptr<SyncLock> SyncLockPointer;
 
-	class LuaState {
-	private:
-		lua_State* _L = nullptr;
-		int _ref = 0;
+	class Lua {
 	public:
-		LuaState() = default;
-		LuaState(lua_State* L, int ref) noexcept;
+		lua_State* state = nullptr;
 
+		Lua();
+		Lua(bool sync);
+		
 		// Copy
-		LuaState(const LuaState& other) = delete;
-		LuaState& operator=(const LuaState& other) = delete;
+		Lua(const Lua& other) = delete;
+		Lua& operator=(const Lua& other) = delete;
 
 		// Move
-		LuaState(LuaState&& other) noexcept;
-		LuaState& operator=(LuaState&& other) noexcept;
+		Lua(Lua&& other) noexcept;
+		Lua& operator=(Lua&& other) = delete;
 
-		bool destroy();
-		~LuaState();
+		~Lua();
 
-		inline lua_State* get() const noexcept { return _L; }
-		inline lua_State* operator*() const noexcept { return get(); }
+		GarrysMod::Lua::ILuaBase* operator->() const;
 
-		bool is_valid() const;
+	private:
+		lua_State* orig_state = nullptr;
+		SyncLockPointer lock;
+
+		void ReceiveState(bool sync);
+		void SetupState();
 	};
 
-private:
-	std::thread::id thread_id;
-	std::queue<LockPointer> queue;
-	std::mutex queue_mutex;
+	bool NeedSync();
 
-public:
-	void initialize();
-	void deinitialize();
-	void think();
+	Lua AcquireLua();
+	Lua AcquireLua(bool sync);
 
-	bool need_sync();
+	void Initialize(GarrysMod::Lua::ILuaBase* LUA);
+	void Deinitialize(GarrysMod::Lua::ILuaBase* LUA);
 
-	LockPointer get_lock();
+	int Think(lua_State* L);
+	int Think(GarrysMod::Lua::ILuaBase* LUA);
+}
 
-	void sync(LockPointer &lock);
-	LockPointer sync();
-	
-	void desync(LockPointer &lock);
-
-	LuaState create_state(lua_State* L);
-};
+#endif // LUA_THREADING_HPP
