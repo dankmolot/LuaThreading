@@ -92,7 +92,7 @@ LuaThreading::LockPointer LuaThreading::get_lock() {
 }
 
 void LuaThreading::sync(LuaThreading::LockPointer &lock) {
-	if (need_sync())
+	if (!need_sync())
 		return;
 
 	{
