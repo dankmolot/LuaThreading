@@ -4,6 +4,15 @@ This module was created for fixing problem with multi threading in Lua.
 It supports creating dedicated lua state, and syncing main lua thread with another thread.
 
 ## How to use
+Include LuaThreading into your project
+```lua
+CreateProject(...)
+    -- ...
+    IncludeLuaShared() -- Do not forget to include LuaShared
+    IncludeLuaThreading()
+    -- ...
+```
+
 Initialize LuaThreading
 ```cpp
 #include <lua_threading.hpp>
