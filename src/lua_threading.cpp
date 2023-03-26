@@ -46,14 +46,14 @@ namespace LuaThreading {
 		}
 	}
 
-	int LuaThreading::Think(lua_State* L)
+	int Think(lua_State* L)
 	{
 		auto LUA = L->luabase;
 		LUA->SetState(L);
 
 		return Think(LUA);
 	}
-	int LuaThreading::Think(GarrysMod::Lua::ILuaBase* LUA) {
+	int Think(GarrysMod::Lua::ILuaBase* LUA) {
 		if (!Locks.empty()) {
 			std::lock_guard<std::mutex> guard(GlobalLock);
 
