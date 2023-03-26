@@ -115,8 +115,16 @@ namespace LuaThreading {
 		}
 	}
 
-	GarrysMod::Lua::ILuaBase* Lua::operator->() const {
+	GarrysMod::Lua::ILuaBase* Lua::Get() const {
 		return state->luabase;
+	}
+
+	GarrysMod::Lua::ILuaBase* Lua::operator->() const {
+		return Get();
+	}
+
+	lua_State* Lua::GetState() const {
+		return state;
 	}
 
 	void Lua::ReceiveState(bool sync) {

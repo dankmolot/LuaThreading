@@ -7,6 +7,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <memory>
+#include <thread>
 
 namespace LuaThreading {
 	// Global Thread ID to determine if we need to sync threads
@@ -40,6 +41,8 @@ namespace LuaThreading {
 		~Lua();
 
 		GarrysMod::Lua::ILuaBase* operator->() const;
+        GarrysMod::Lua::ILuaBase* Get() const;
+        lua_State* GetState() const;
 
 	private:
 		lua_State* orig_state = nullptr;
