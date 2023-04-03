@@ -59,7 +59,7 @@ namespace LuaThreading {
 
 			auto& lock = Locks.front();
 			{
-				std::unique_lock ulock(lock->m);
+				std::unique_lock<std::mutex> ulock(lock->m);
 				lock->step1 = true;
 				lock->state = LUA->GetState();
 
