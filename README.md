@@ -13,6 +13,12 @@ CreateProject(...)
     -- ...
 ```
 
+If you're using CMake:
+```cmake
+target_include_libraries(<your_library> PRIVATE LuaThreading)
+# P.S: Use my CMake fork of garrysmod_common
+```
+
 Initialize LuaThreading
 ```cpp
 #include <lua_threading.hpp>
