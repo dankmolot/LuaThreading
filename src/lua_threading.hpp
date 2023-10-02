@@ -24,7 +24,8 @@ namespace LuaThreading {
 
 	class Lua {
 	public:
-		GarrysMod::Lua::ILuaBase* state = nullptr;
+		lua_State* state = nullptr;
+		GarrysMod::Lua::ILuaBase* LUA = nullptr;
 
 		Lua();
 		Lua(bool sync);

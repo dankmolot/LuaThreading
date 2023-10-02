@@ -79,7 +79,7 @@ namespace LuaThreading {
 
 	Lua::Lua(Lua&& other) noexcept {
 		state = other.state;
-		other.state = nullptr;
+		LUA = other.LUA;
 
 		lock.swap(other.lock);
 	}
@@ -98,7 +98,7 @@ namespace LuaThreading {
 	}
 
 	GarrysMod::Lua::ILuaBase* Lua::Get() const {
-		return state;
+		return LUA;
 	}
 
 	GarrysMod::Lua::ILuaBase* Lua::operator->() const {
@@ -106,7 +106,7 @@ namespace LuaThreading {
 	}
 
 	lua_State* Lua::GetState() const {
-		return state->GetState();
+		return state;
 	}
 
 	void Lua::ReceiveState(bool sync) {
@@ -122,9 +122,10 @@ namespace LuaThreading {
 
 		std::unique_lock<std::mutex> ulock(lock->m);
 		lock->cv.wait(ulock, [&] { return lock->step1; });
+		state = LUA->GetState();
 	}
 
 	void Lua::SetupState() {
-		state = GlobalState;
+		LUA = GlobalState;
 	}
 }
