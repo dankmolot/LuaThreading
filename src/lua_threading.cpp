@@ -4,17 +4,13 @@
 
 #include <queue>
 
-struct LuaState {
-	lua_State* L = nullptr;
-	int ref = 0;
-};
 
 namespace LuaThreading {
 	// Initializing global variables
 	std::thread::id MainThreadID;
 	static std::mutex GlobalLock;
 	static std::queue<SyncLockPointer> Locks;
-	static LuaState GlobalState;
+	static GarrysMod::Lua::ILuaBase* GlobalState = nullptr;
 		
 	bool NeedSync() {
 		return std::this_thread::get_id() != MainThreadID;
@@ -32,18 +28,11 @@ namespace LuaThreading {
 
 	void Initialize(GarrysMod::Lua::ILuaBase* LUA) {
 		MainThreadID = std::this_thread::get_id();
-
-		GlobalState.L = lua_newthread(LUA->GetState());
-		GlobalState.ref = LUA->ReferenceCreate();
+		GlobalState = LUA;
 	}
 
 	void Deinitialize(GarrysMod::Lua::ILuaBase* LUA) {
-		if (GlobalState.ref) {
-			LUA->ReferenceFree(GlobalState.ref);
-
-			GlobalState.L = nullptr;
-			GlobalState.ref = 0;
-		}
+		GlobalState = nullptr;
 	}
 
 	int Think(lua_State* L)
@@ -61,7 +50,6 @@ namespace LuaThreading {
 			{
 				std::unique_lock<std::mutex> ulock(lock->m);
 				lock->step1 = true;
-				lock->state = LUA->GetState();
 
 				// Unlocking thread
 				lock->cv.notify_one();
@@ -71,7 +59,6 @@ namespace LuaThreading {
 
 				lock->step1 = false;
 				lock->step2 = false;
-				lock->state = nullptr;
 			}
 			Locks.pop();
 		}
@@ -101,12 +88,7 @@ namespace LuaThreading {
 	//	// TODO: insert return statement here
 	//}
 
-	Lua::~Lua() {
-		if (state) {
-			state->luabase->SetState(orig_state);
-		}
-		
-
+	Lua::~Lua() {		
 		// Unlocking if locked
 		if (lock && lock->step1) {
 			std::lock_guard<std::mutex> guard(lock->m);
@@ -116,7 +98,7 @@ namespace LuaThreading {
 	}
 
 	GarrysMod::Lua::ILuaBase* Lua::Get() const {
-		return state->luabase;
+		return state;
 	}
 
 	GarrysMod::Lua::ILuaBase* Lua::operator->() const {
@@ -124,12 +106,11 @@ namespace LuaThreading {
 	}
 
 	lua_State* Lua::GetState() const {
-		return state;
+		return state->GetState();
 	}
 
 	void Lua::ReceiveState(bool sync) {
 		if (!sync) {
-			state = GlobalState.L;
 			return;
 		}
 
@@ -141,12 +122,9 @@ namespace LuaThreading {
 
 		std::unique_lock<std::mutex> ulock(lock->m);
 		lock->cv.wait(ulock, [&] { return lock->step1; });
-
-		state = lock->state;
 	}
 
 	void Lua::SetupState() {
-		orig_state = state->luabase->GetState();
-		state->luabase->SetState(state);
+		state = GlobalState;
 	}
 }

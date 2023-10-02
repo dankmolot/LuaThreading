@@ -18,14 +18,13 @@ namespace LuaThreading {
 		std::condition_variable cv;
 		bool step1 = false;
 		bool step2 = false;
-		lua_State* state = nullptr;
 	};
 
 	typedef std::shared_ptr<SyncLock> SyncLockPointer;
 
 	class Lua {
 	public:
-		lua_State* state = nullptr;
+		GarrysMod::Lua::ILuaBase* state = nullptr;
 
 		Lua();
 		Lua(bool sync);
@@ -45,7 +44,6 @@ namespace LuaThreading {
         lua_State* GetState() const;
 
 	private:
-		lua_State* orig_state = nullptr;
 		SyncLockPointer lock;
 
 		void ReceiveState(bool sync);
