@@ -1,9 +1,7 @@
 #include "lua_threading.hpp"
-#include <lua.hpp>
 #include <GarrysMod/Lua/Interface.h>
 
 #include <queue>
-
 
 namespace LuaThreading {
 	// Initializing global variables
@@ -122,10 +120,10 @@ namespace LuaThreading {
 
 		std::unique_lock<std::mutex> ulock(lock->m);
 		lock->cv.wait(ulock, [&] { return lock->step1; });
-		state = LUA->GetState();
 	}
 
 	void Lua::SetupState() {
 		LUA = GlobalState;
+		state = LUA->GetState();
 	}
 }
